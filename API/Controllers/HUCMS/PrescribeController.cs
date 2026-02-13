@@ -2,6 +2,7 @@
 using HUCMS.Models.HUCMS;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
@@ -31,9 +32,21 @@ namespace HUCMS.Controllers.HUCMS
                 DateTime endDate = DateTime.Now;
                 decimal elapsedTimeHours;
                 Guid next_task;
+                Guid applicationCode = Guid.Empty;
+                Guid processDetailCode = Guid.Empty;
+                string applicationNumber = prsc.application_number;
                 using SqlConnection conn = new(connStr);
                 conn.Open();
+                // Fetch application_code via stored procedure
+                applicationCode = GetApplicationCode(conn, applicationNumber);
 
+                if (applicationCode == Guid.Empty)
+                {
+                    return BadRequest(new
+                    {
+                        Error = "Application not found for the given application number."
+                    });
+                }
                 // Get start_date
                 using (SqlCommand cmd = new("proc_getStartDate", conn))
                 {
@@ -61,7 +74,7 @@ namespace HUCMS.Controllers.HUCMS
 
                 // Calculate elapsed hours
                 elapsedTimeHours = Convert.ToDecimal((endDate - startDate).TotalHours);
-
+                processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, prsc.tasks_task_code.Value);
                 using SqlCommand InsertCmd = new("proc_InsertPrescription", conn)
                 {
                     CommandType = CommandType.StoredProcedure
@@ -69,6 +82,7 @@ namespace HUCMS.Controllers.HUCMS
                 InsertCmd.Parameters.AddWithValue("@created_by", prsc.UserId);
                 InsertCmd.Parameters.AddWithValue("@diagnosis_Code", prsc.diagnosisCode);
                 InsertCmd.Parameters.AddWithValue("@RX", prsc.RX);
+                InsertCmd.Parameters.AddWithValue("@detail_code", processDetailCode);
                 InsertCmd.ExecuteNonQuery();
 
                 // Update old row
@@ -96,9 +110,13 @@ namespace HUCMS.Controllers.HUCMS
                     insertCmd.Parameters.AddWithValue("@application_number", (object?)prsc.application_number ?? DBNull.Value);
                     insertCmd.ExecuteNonQuery();
                 }
+
+                // Update TodoDetailId 
+                UpdateTodoDetailId(conn, newToDoCode, processDetailCode);
                 return Ok(new
                 {
-                    Message = "prescription inserted successfully "+ "\n✅ ToDo updated and new ToDo created",
+                    Message = "prescription inserted successfully " +
+                    " ✅ ToDo updated and new ToDo created",
                     diagnosisCode = prsc.diagnosisCode,
                     CompletedToDoCode = prsc.todocode,
                     CompletedEndDate = endDate,
@@ -114,6 +132,60 @@ namespace HUCMS.Controllers.HUCMS
                     Details = ex.Message
                 });
             }
+        }
+     //Helper method to fetch application_code 
+        private Guid GetApplicationCode(SqlConnection conn, string applicationNumber)
+        {
+            using SqlCommand cmd = new("proc_getApplicationCode", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.AddWithValue("@application_number", applicationNumber ?? (object)DBNull.Value);
+
+            SqlParameter outputParam = new("@application_code", SqlDbType.UniqueIdentifier)
+            {
+                Direction = ParameterDirection.Output
+            };
+            cmd.Parameters.Add(outputParam);
+
+            cmd.ExecuteNonQuery();
+
+            return outputParam.Value != DBNull.Value ? (Guid)outputParam.Value : Guid.Empty;
+        }
+
+        private Guid InsertApplicationProcessDetail(SqlConnection conn, Guid applicationCode, Guid tasksTaskCode)
+        {
+            using SqlCommand cmd2 = new("proc_InsertApplicationProcessDetail", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd2.Parameters.AddWithValue("@applications_application_code", applicationCode);
+            cmd2.Parameters.AddWithValue("@tasks_task_code", tasksTaskCode);
+
+            SqlParameter outputParam = new("@process_detail_code", SqlDbType.UniqueIdentifier)
+            {
+                Direction = ParameterDirection.Output
+            };
+            cmd2.Parameters.Add(outputParam);
+
+            cmd2.ExecuteNonQuery();
+
+            return (Guid)outputParam.Value;
+        }
+        // helper method to update Todo Detail ID
+        private void UpdateTodoDetailId(SqlConnection conn, Guid newToDoCode, Guid processDetailCode)
+        {
+            using SqlCommand cmd = new("proc_updateTodoDetailIdForPrescription", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.AddWithValue("@to_do_code", newToDoCode );
+            cmd.Parameters.AddWithValue("@detail_code", processDetailCode);
+
+            cmd.ExecuteNonQuery();
         }
     }
 }

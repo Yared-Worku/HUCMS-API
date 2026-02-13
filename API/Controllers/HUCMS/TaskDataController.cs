@@ -71,7 +71,7 @@ namespace BPM.Controllers.HU
             }
         }
 
-        //Helper method to fetch application_code using stored procedure
+        //Helper method to fetch application_code 
         private Guid GetApplicationCode(SqlConnection conn, string applicationNumber)
         {
             using SqlCommand cmd = new("proc_getApplicationCode", conn)
