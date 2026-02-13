@@ -30,7 +30,7 @@ namespace BPM.Controllers.HU
                 using SqlConnection conn = new(connStr);
                 conn.Open();
 
-                // 1️⃣ Get start_date
+                // Get start_date
                 using (SqlCommand cmd = new("proc_getStartDate", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
@@ -42,7 +42,7 @@ namespace BPM.Controllers.HU
 
                     startDate = Convert.ToDateTime(result);
                 }
-                // 1️⃣ Get gototask
+                //Get gototask
                 using (SqlCommand cmd = new("proc_getGoToTask", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
@@ -55,10 +55,10 @@ namespace BPM.Controllers.HU
                     goto_task = (Guid)result;
                 }
 
-                // 2️⃣ Calculate elapsed hours
+                // Calculate elapsed hours
                 elapsedTimeHours = Convert.ToDecimal((endDate - startDate).TotalHours);
 
-                // 3️⃣ Update old row
+                // Update old row
                 using (SqlCommand updateCmd = new("proc_updateTodoListTask", conn))
                 {
                     updateCmd.CommandType = CommandType.StoredProcedure;
@@ -71,7 +71,7 @@ namespace BPM.Controllers.HU
                     updateCmd.ExecuteNonQuery();
                 }
 
-                // 4️⃣ Insert new row
+                // Insert new row
                 Guid newToDoCode = Guid.NewGuid();
                 using (SqlCommand insertCmd = new("proc_insertToDolist", conn))
                 {

@@ -61,11 +61,14 @@ namespace HUCMS.Controllers.HUCMS
                         applicationCode
                     );
                 }
+                bool isNew = request.detail_code == null || request.detail_code == Guid.Empty;
                 labCode = InsertApplicationProcessLabTestData(conn, request.lab_test, created_by, processDetailCode, request.diagnosisCode);
 
-                //  Todoinsert using new helper method
-                TodoInsert(conn, applicationNumber, processDetailCode, request.UserId, request.organization_code, request.tasks_task_code);
-
+                if (isNew)
+                {
+                    //  Todoinsert using new helper method
+                    TodoInsert(conn, applicationNumber, processDetailCode, request.UserId, request.organization_code, request.tasks_task_code);
+                }   
                 return Ok(new
                 {
                     Message = "✅ Lab test data inserted successfully",
