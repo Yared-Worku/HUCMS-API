@@ -44,20 +44,28 @@ namespace HU_api.Controllers.HU
                 if (!string.IsNullOrEmpty(app.application_number))
                 {
                     var (dbProcessDetailCode, toDoCode) = GetProcessDetailCode(conn, app.application_number);
-
-                    if (dbProcessDetailCode != Guid.Empty)
+                    if (!app.diagnosis_code.HasValue || app.diagnosis_code == Guid.Empty)
                     {
-                        processDataCode = InsertApplicationProcessData(conn, app.value, dbProcessDetailCode);
+                        if (dbProcessDetailCode != Guid.Empty)
+                        {
+                            processDataCode = InsertApplicationProcessData(conn, app.value, dbProcessDetailCode);
+                        }
                     }
-
-                    return Ok(new
+                    else
                     {
-                        Message = "✅ Existing application processed",
-                        ApplicationNumber = app.application_number,
-                        ProcessDetailCode = dbProcessDetailCode,
-                        ToDoCode = toDoCode,
-                        ProcessDataCode = processDataCode
-                    });
+                        if (dbProcessDetailCode != Guid.Empty)
+                        {
+                            processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, dbProcessDetailCode);
+                        }
+                    }
+                        return Ok(new
+                        {
+                            Message = "✅ Existing application processed",
+                            ApplicationNumber = app.application_number,
+                            ProcessDetailCode = dbProcessDetailCode,
+                            ToDoCode = toDoCode,
+                            ProcessDataCode = processDataCode
+                        });
 
                 }
 
@@ -113,10 +121,16 @@ namespace HU_api.Controllers.HU
                         }
                     }
 
-                    // Insert process details & data
+                    // Insert process details & data 
                     processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, app.tasks_task_code.Value);
-                    processDataCode = InsertApplicationProcessData(conn, app.value, processDetailCode);
-
+                    if (!app.diagnosis_code.HasValue || app.diagnosis_code == Guid.Empty)
+                    {
+                        processDataCode = InsertApplicationProcessData(conn, app.value, processDetailCode);
+                    }
+                    else
+                    {
+                        processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, processDetailCode);
+                    }
                     // Insert to-do list
                     ToDoListCode = _toDoListService.InsertToDoList(
                         app.tasks_task_code.Value,
@@ -230,17 +244,6 @@ namespace HU_api.Controllers.HU
                 });
             }
         }
-        //private string GetUserIdByUsername(string connStr, string username)
-        //{
-        //    using SqlConnection conn = new(connStr);
-        //    using SqlCommand cmd = new("SELECT userId FROM AspNetUser WHERE Username = @Username", conn);
-        //    cmd.Parameters.AddWithValue("@Username", username);
-
-        //    conn.Open();
-        //    var result = cmd.ExecuteScalar();
-        //    return result != null ? result.ToString() : null;
-        //}
-
         private Guid InsertApplicationProcessDetail(SqlConnection conn, Guid applicationCode, Guid tasksTaskCode)
         {
             using SqlCommand cmd2 = new("proc_InsertApplicationProcessDetail", conn)
@@ -277,6 +280,30 @@ namespace HU_api.Controllers.HU
                 cmd.Parameters.AddWithValue("@application_process_details_process_detail_code", DBNull.Value);
 
             SqlParameter outputParam = new("@process_data_code", SqlDbType.UniqueIdentifier)
+            {
+                Direction = ParameterDirection.Output
+            };
+            cmd.Parameters.Add(outputParam);
+
+            cmd.ExecuteNonQuery();
+
+            return (Guid)outputParam.Value;
+        }
+        private Guid InsertApplicationProcessCertificateData(SqlConnection conn, Guid? diagnosis_code, Guid? applicationProcessDetailsProcessDetailCode)
+        {
+            using SqlCommand cmd = new("proc_InsertApplicationprocessCertificatedata", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.AddWithValue("@diagnosis_code", diagnosis_code ?? (object)DBNull.Value);
+
+            if (applicationProcessDetailsProcessDetailCode.HasValue)
+                cmd.Parameters.AddWithValue("@detail_code", applicationProcessDetailsProcessDetailCode.Value);
+            else
+                cmd.Parameters.AddWithValue("@detail_code", DBNull.Value);
+
+            SqlParameter outputParam = new("@certificate_Code", SqlDbType.UniqueIdentifier)
             {
                 Direction = ParameterDirection.Output
             };
