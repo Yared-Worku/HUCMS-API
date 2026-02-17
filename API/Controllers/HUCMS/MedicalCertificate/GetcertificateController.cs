@@ -40,7 +40,8 @@ namespace HUCMS.Controllers.HUCMS.MedicalCertificate
                     results.Add(new Getcertificate
                     {
                         application_number = reader["application_number"] != DBNull.Value ? reader["application_number"].ToString() : null,
-                        diagnosis_code = reader["diagnosis_code"] != DBNull.Value ? (Guid)reader["diagnosis_code"] : null
+                        diagnosis_code = reader["diagnosis_code"] != DBNull.Value ? (Guid)reader["diagnosis_code"] : null,
+                        detail_code = reader["detail_code"] != DBNull.Value ? (Guid)reader["detail_code"] : null
                     });
                 }
 
