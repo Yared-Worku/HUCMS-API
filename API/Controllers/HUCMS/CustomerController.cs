@@ -73,7 +73,7 @@ namespace HU_api.Controllers.HU
 
             cmd.Parameters.AddWithValue("@Created_Date", customer.Created_Date ?? DateTime.Now);
             cmd.Parameters.AddWithValue("@Updated_Date", customer.Updated_Date ?? DateTime.Now);
-            cmd.Parameters.AddWithValue("@Signiture", customer.Signiture ?? (object)DBNull.Value);
+            //cmd.Parameters.AddWithValue("@Signiture", customer.Signiture ?? (object)DBNull.Value);
             try
             {
                 conn.Open();
@@ -137,7 +137,7 @@ namespace HU_api.Controllers.HU
                         Updated_By = reader["Updated_By"]?.ToString(),
                         Created_Date = reader["Created_Date"] != DBNull.Value ? (DateTime?)reader["Created_Date"] : null,
                         Updated_Date = reader["Updated_Date"] != DBNull.Value ? (DateTime?)reader["Updated_Date"] : null,
-                        Signiture = reader["Signiture"]?.ToString()
+                        //Signiture = reader["Signiture"]?.ToString()
                        
                     });
                 }
