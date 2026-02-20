@@ -28,6 +28,7 @@ namespace HUCMS.Models.HUCMS.Commons
         public Guid? meta_data_forms_form_code { get; set; }
         public Guid? RoleId { get; set; }
         public Guid? diagnosis_code { get; set; }
+        public string? document { get; set; }
     }
 
 }

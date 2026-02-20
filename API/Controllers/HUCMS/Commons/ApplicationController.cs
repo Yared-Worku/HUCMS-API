@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -52,9 +53,18 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     }
                     else
                     {
-                        if (dbProcessDetailCode != Guid.Empty)
+                        if (!string.IsNullOrEmpty(app.document))
                         {
-                            processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, dbProcessDetailCode);
+                            if (dbProcessDetailCode != Guid.Empty)
+                            {
+                                processDataCode = InsertApplicationProcessPaymentRefundData(conn, app.diagnosis_code, dbProcessDetailCode, app.document, app.UserId);
+                            }
+                        }
+                        else {
+                            if (dbProcessDetailCode != Guid.Empty)
+                            {
+                                processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, dbProcessDetailCode);
+                            }
                         }
                     }
                         return Ok(new
@@ -65,9 +75,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                             ToDoCode = toDoCode,
                             ProcessDataCode = processDataCode
                         });
-
-                }
-
+                      }
                 else
                 {
                     // application_number null: full creation process
@@ -90,14 +98,10 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
                     cmd.Parameters.AddWithValue("@application_number",
                         app.application_number ?? $"{registrationCode}-{DateTime.Now.Ticks}");
-
                     cmd.Parameters.AddWithValue("@is_completed", app.is_completed ?? 0);
                     cmd.Parameters.AddWithValue("@status", app.status ?? "Draft");
-
-
                     var dateCreatedParam = cmd.Parameters.Add("@date_created", SqlDbType.DateTime);
                     dateCreatedParam.Value = app.date_created == null || app.date_created == default ? DateTime.Now : app.date_created;
-
                     cmd.Parameters.AddWithValue("@date_created_et", app.date_created_et ?? EthiopianDateConverter.ToEthiopianDateTimeString(DateTime.UtcNow));
                     cmd.Parameters.AddWithValue("@UserId", app.UserId ?? "00000000-0000-0000-0000-000000000000");
                     cmd.Parameters.AddWithValue("@services_service_code", app.services_service_code);
@@ -128,7 +132,14 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     }
                     else
                     {
-                        processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, processDetailCode);
+                        if (!string.IsNullOrEmpty(app.document))
+                        {
+                                processDataCode = InsertApplicationProcessPaymentRefundData(conn, app.diagnosis_code, processDetailCode, app.document, app.UserId);
+                        }
+                        else
+                        {
+                                processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, processDetailCode);
+                        }
                     }
                     // Insert to-do list
                     ToDoListCode = _toDoListService.InsertToDoList(
@@ -311,6 +322,100 @@ namespace HUCMS.Controllers.HUCMS.Commons
             cmd.ExecuteNonQuery();
 
             return (Guid)outputParam.Value;
+        }
+        private Guid InsertApplicationProcessPaymentRefundData(
+            SqlConnection conn,
+            Guid? diagnosis_code,
+            Guid? applicationProcessDetailsProcessDetailCode,
+            string? document,
+            string? created_by
+          )
+        {
+            using SqlTransaction transaction = conn.BeginTransaction();
+
+            try
+            {
+                Guid? pr_code = null;
+
+                if (diagnosis_code.HasValue)
+                {
+                    pr_code = getPrCodeByDiagnosisCode(conn, applicationProcessDetailsProcessDetailCode.Value, transaction);
+                }
+
+                using SqlCommand cmd = new("proc_InsertApplicationprocessPaymentRefunddata", conn, transaction)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                cmd.Parameters.AddWithValue("@detail_code", applicationProcessDetailsProcessDetailCode ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@diagnosis_code", diagnosis_code ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@created_by", created_by ?? (object)DBNull.Value);
+                SqlParameter outputParam = new("@pr_Code", SqlDbType.UniqueIdentifier)
+                {
+                    Direction = ParameterDirection.InputOutput,
+                    Value = pr_code.HasValue ? pr_code.Value : (object)DBNull.Value
+                };
+                cmd.Parameters.Add(outputParam);
+
+                cmd.ExecuteNonQuery();
+
+                Guid resultPrCode = (Guid)outputParam.Value;
+
+                // Upload document inside SAME transaction
+                if (!string.IsNullOrEmpty(document))
+                {
+                    UploadDocument(conn, resultPrCode, document, applicationProcessDetailsProcessDetailCode, transaction);
+                }
+
+                transaction.Commit();
+
+                return resultPrCode;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+        private Guid? getPrCodeByDiagnosisCode( SqlConnection conn, Guid applicationProcessDetailsProcessDetailCode, SqlTransaction transaction)
+        {
+            using SqlCommand cmd = new("proc_getPrCode", conn, transaction)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.AddWithValue("@detail_code", applicationProcessDetailsProcessDetailCode);
+
+            SqlParameter outputParam = new("@pr_Code", SqlDbType.UniqueIdentifier)
+            {
+                Direction = ParameterDirection.Output
+            };
+
+            cmd.Parameters.Add(outputParam);
+
+            cmd.ExecuteNonQuery();
+
+            if (outputParam.Value == DBNull.Value || outputParam.Value == null)
+                return null;
+
+            return (Guid)outputParam.Value;
+        }
+        private void UploadDocument(
+            SqlConnection conn,
+            Guid? pr_code,
+            string document,
+            Guid? application_details_detail_code,
+            SqlTransaction transaction)
+        {
+            using SqlCommand cmd = new("proc_UploadDocument", conn, transaction)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.AddWithValue("@pr_Code", pr_code);
+            cmd.Parameters.AddWithValue("@uploaded_file", document);
+            cmd.Parameters.AddWithValue("@application_details_detail_code", application_details_detail_code);
+
+            cmd.ExecuteNonQuery();
         }
     }
 }
