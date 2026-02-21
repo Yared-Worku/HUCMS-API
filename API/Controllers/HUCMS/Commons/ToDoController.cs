@@ -42,7 +42,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
                     startDate = Convert.ToDateTime(result);
                 }
-                // 1️⃣ Get next_task
+                // Get next_task
                 using (SqlCommand cmd = new("proc_getNextTask", conn))
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
@@ -55,23 +55,28 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     next_task = (Guid)result;
                 }
 
-                // 2️⃣ Calculate elapsed hours
+                // Calculate elapsed hours
                 elapsedTimeHours = Convert.ToDecimal((endDate - startDate).TotalHours);
 
-                // 3️⃣ Update old row
+                // Update old row
                 using (SqlCommand updateCmd = new("proc_updateTodoList", conn))
                 {
                     updateCmd.CommandType = CommandType.StoredProcedure;
                     updateCmd.Parameters.AddWithValue("@todocode", todo.todocode);
                     updateCmd.Parameters.AddWithValue("@end_date", endDate);
                     updateCmd.Parameters.AddWithValue("@elapsed_time_hours", elapsedTimeHours);
-                    //updateCmd.Parameters.AddWithValue("@jumpfrom", (object?)todo.jump_From ?? DBNull.Value);
-                    //updateCmd.Parameters.AddWithValue("@tasks_task_code", (object?)todo.tasks_task_code ?? DBNull.Value);
-
                     updateCmd.ExecuteNonQuery();
                 }
 
-                // 4️⃣ Insert new row
+                if (next_task == Guid.Empty)
+                {
+                    return Ok(new
+                    {
+                        Message = "No next task found.",
+                        CurrentTask = todo.todocode
+                    });
+                }
+                //Insert new row
                 Guid newToDoCode = Guid.NewGuid();
                 using (SqlCommand insertCmd = new("proc_insertToDolist", conn))
                 {
