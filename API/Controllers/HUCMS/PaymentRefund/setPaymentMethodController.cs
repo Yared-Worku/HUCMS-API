@@ -18,26 +18,36 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
         }
 
         [HttpPost]
-        public IActionResult setpaymentmethod([FromBody] setPaymentMethod spr)
+        public IActionResult setpaymentmethod([FromBody] List<setPaymentMethod> sprList) 
         {
-         
+            if (sprList == null || sprList.Count == 0)
+            {
+                return BadRequest("No payment methods provided.");
+            }
+
             string connStr = _config.GetConnectionString("HU_DB");
             using SqlConnection conn = new(connStr);
             conn.Open();
 
+            using SqlTransaction transaction = conn.BeginTransaction();
+
             try
             {
-                    Insertpaymentmethod(conn, spr.account_number, spr.User_Id, spr.method_code);
-                
-             
+                foreach (var spr in sprList)
+                {
+                    Insertpaymentmethod(conn, transaction, spr.account_number, spr.UserId, spr.method_code, spr.AllActiveMethods);
+                }
+
+                transaction.Commit();
+
                 return Ok(new
                 {
-                    Message = "✅ payment method inserted successfully",
-         
+                    Message = "✅ Payment methods inserted successfully",
                 });
             }
             catch (SqlException ex)
             {
+                transaction.Rollback();
                 return StatusCode(500, new
                 {
                     Error = "❌ Database error occurred",
@@ -45,16 +55,18 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                 });
             }
         }
-        private void  Insertpaymentmethod(SqlConnection conn, int? account_number, Guid? User_Id, Guid? method_code)
+
+        private void Insertpaymentmethod(SqlConnection conn, SqlTransaction trans, string? account_number, Guid? User_Id, Guid? method_code, string? activeMethods)
         {
-            using SqlCommand cmd = new("proc_setPaymentmethod", conn)
+            using SqlCommand cmd = new("proc_setPaymentmethod", conn, trans)
             {
                 CommandType = CommandType.StoredProcedure
             };
 
-            cmd.Parameters.AddWithValue("@AccNo", account_number.Value);
-            cmd.Parameters.AddWithValue("@UserId", User_Id);
-            cmd.Parameters.AddWithValue("@Paymentmethod_Code", method_code.Value);
+            cmd.Parameters.AddWithValue("@AccNo", (object)account_number ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@UserId", (object)User_Id ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Paymentmethod_Code", (object)method_code ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@AllActiveMethods", activeMethods);
             cmd.ExecuteNonQuery();
         }
 
