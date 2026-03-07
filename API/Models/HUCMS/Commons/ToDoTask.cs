@@ -12,5 +12,7 @@
         public Guid? organization_code { get; set; }
         public Guid? task_rules_code { get; set; }
         public Guid? ProcessDetailCode { get; set; }
+        public string? rejection_reason { get; set; }
+
     }
 }

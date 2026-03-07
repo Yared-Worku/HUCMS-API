@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Net;
 namespace HUCMS.Controllers.HUCMS.Commons
 {
     [Route("api/HU/[controller]")]
@@ -66,11 +67,26 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     updateCmd.Parameters.AddWithValue("@end_date", endDate);
                     updateCmd.Parameters.AddWithValue("@elapsed_time_hours", elapsedTimeHours);
                     updateCmd.Parameters.AddWithValue("@application_detail_id", (object?)todo.ProcessDetailCode ?? DBNull.Value);
-                    //updateCmd.Parameters.AddWithValue("@tasks_task_code", (object?)todo.tasks_task_code ?? DBNull.Value);
-
                     updateCmd.ExecuteNonQuery();
                 }
+        
+                if (!string.IsNullOrWhiteSpace(todo.rejection_reason))
+                {
+                    using (SqlCommand rejectCmd = new("proc_insertRejection", conn))
+                    {
+                        rejectCmd.CommandType = CommandType.StoredProcedure; 
+                        rejectCmd.Parameters.AddWithValue("@application_detail_id", (object?)todo.ProcessDetailCode ?? DBNull.Value);
+                        rejectCmd.Parameters.AddWithValue("@reason", todo.rejection_reason); 
+                        rejectCmd.ExecuteNonQuery();
+                    }
 
+                    return Ok(new
+                    {
+                        Status = "Rejected",
+                        Message = "✅ Task rejected. Process halted.",
+                        CompletedToDoCode = todo.todocode
+                    });
+                }
                 // Insert new row
                 Guid newToDoCode = Guid.NewGuid();
                 using (SqlCommand insertCmd = new("proc_insertToDolist", conn))
