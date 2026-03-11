@@ -29,6 +29,7 @@ namespace HUCMS.Models.HUCMS.Commons
         public Guid? RoleId { get; set; }
         public Guid? diagnosis_code { get; set; }
         public string? document { get; set; }
+        public Guid? todocode { get; set; }
     }
 
 }

@@ -2,11 +2,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Reflection;
 
 namespace HUCMS.Controllers.HUCMS.Commons
 {
@@ -16,6 +16,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
     {
         private readonly IConfiguration _config;
         private readonly ToDoListService _toDoListService;
+
         public ApplicationController(IConfiguration config)
         {
             _config = config;
@@ -43,43 +44,52 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
                 if (!string.IsNullOrEmpty(app.application_number))
                 {
-                    var (dbProcessDetailCode, toDoCode) = GetProcessDetailCode(conn, app.application_number);
-                    if (!app.diagnosis_code.HasValue || app.diagnosis_code == Guid.Empty)
+                    var (dbProcessDetailCode, toDoCode) = GetProcessDetailCode(conn, app.application_number, app);
+
+                    Guid activeToDoCode = toDoCode != Guid.Empty ? toDoCode : (app.todocode ?? Guid.Empty);
+
+                    if (dbProcessDetailCode != Guid.Empty)
                     {
-                        if (dbProcessDetailCode != Guid.Empty)
+                        using (SqlCommand updateCmd = new("proc_updateTodoListdetailid", conn))
+                        {
+                            updateCmd.CommandType = CommandType.StoredProcedure;
+                            updateCmd.Parameters.AddWithValue("@todocode", activeToDoCode);
+                            updateCmd.Parameters.AddWithValue("@application_detail_id", dbProcessDetailCode);
+                            updateCmd.ExecuteNonQuery();
+                        }
+
+                        if (!app.diagnosis_code.HasValue || app.diagnosis_code == Guid.Empty)
                         {
                             processDataCode = InsertApplicationProcessData(conn, app.value, dbProcessDetailCode);
                         }
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(app.document))
+                        else
                         {
-                            if (dbProcessDetailCode != Guid.Empty)
+                            if (!string.IsNullOrEmpty(app.document))
                             {
                                 processDataCode = InsertApplicationProcessPaymentRefundData(conn, app.diagnosis_code, dbProcessDetailCode, app.document, app.UserId);
                             }
-                        }
-                        else {
-                            if (dbProcessDetailCode != Guid.Empty)
+                            else
                             {
                                 processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, dbProcessDetailCode);
                             }
                         }
                     }
-                        return Ok(new
-                        {
-                            Message = "✅ Existing application processed",
-                            ApplicationNumber = app.application_number,
-                            ProcessDetailCode = dbProcessDetailCode,
-                            ToDoCode = toDoCode,
-                            ProcessDataCode = processDataCode
-                        });
-                      }
+                    else
+                    {
+                        return StatusCode(500, new { Error = "❌ Could not generate a valid Process Detail Code." });
+                    }
+
+                    return Ok(new
+                    {
+                        Message = "✅ Existing application processed",
+                        ApplicationNumber = app.application_number,
+                        ProcessDetailCode = dbProcessDetailCode,
+                        ToDoCode = activeToDoCode,
+                        ProcessDataCode = processDataCode
+                    });
+                }
                 else
                 {
-                    // application_number null: full creation process
-
                     using SqlCommand cmd = new("proc_CreateApplication", conn)
                     {
                         CommandType = CommandType.StoredProcedure
@@ -108,7 +118,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     cmd.Parameters.AddWithValue("@is_synched", app.is_synched ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@date_synched", app.date_synched ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@organization_code", app.organization_code ?? (object)DBNull.Value);
-                 
+
                     // ✅ Execute stored procedure and read results
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
@@ -134,13 +144,14 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     {
                         if (!string.IsNullOrEmpty(app.document))
                         {
-                                processDataCode = InsertApplicationProcessPaymentRefundData(conn, app.diagnosis_code, processDetailCode, app.document, app.UserId);
+                            processDataCode = InsertApplicationProcessPaymentRefundData(conn, app.diagnosis_code, processDetailCode, app.document, app.UserId);
                         }
                         else
                         {
-                                processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, processDetailCode);
+                            processDataCode = InsertApplicationProcessCertificateData(conn, app.diagnosis_code, processDetailCode);
                         }
                     }
+
                     // Insert to-do list
                     ToDoListCode = _toDoListService.InsertToDoList(
                         app.tasks_task_code.Value,
@@ -148,7 +159,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                         DateTime.Now,
                         app.organization_code ?? Guid.Empty,
                         app.UserId ?? "00000000-0000-0000-0000-000000000000",
-                        processDetailCode 
+                        processDetailCode
                     );
 
                     return Ok(new
@@ -173,24 +184,48 @@ namespace HUCMS.Controllers.HUCMS.Commons
             }
         }
 
-        // Helper to get process detail code if application exists
-        private (Guid ApplicationDetailId, Guid ToDoCode) GetProcessDetailCode(SqlConnection conn, string applicationNumber)
+        private (Guid ApplicationDetailId, Guid ToDoCode) GetProcessDetailCode(SqlConnection conn, string applicationNumber, Application app)
         {
-            using SqlCommand cmd = new("proc_GetDetailCode", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-            cmd.Parameters.AddWithValue("@application_number", applicationNumber);
+            Guid detailCode = Guid.Empty;
+            Guid toDoCode = Guid.Empty;
 
-            using SqlDataReader reader = cmd.ExecuteReader();
-            if (reader.Read())
+            using (SqlCommand cmd = new("proc_GetDetailCode", conn))
             {
-                return (reader.GetGuid(0), reader.GetGuid(1));
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@application_number", applicationNumber);
+
+                using SqlDataReader reader = cmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    detailCode = reader.IsDBNull(0) ? Guid.Empty : reader.GetGuid(0);
+                    toDoCode = reader.IsDBNull(1) ? Guid.Empty : reader.GetGuid(1);
+                }
             }
 
-            return (Guid.Empty, Guid.Empty);
-        }
+            // Logic to handle missing application_code from frontend payload
+            if (detailCode == Guid.Empty && app.tasks_task_code.HasValue)
+            {
+                Guid appCodeToUse = app.application_code ?? Guid.Empty;
 
+                if (appCodeToUse == Guid.Empty)
+                {
+                    using SqlCommand cmdApp = new("SELECT application_code FROM applications WHERE application_number = @num", conn);
+                    cmdApp.Parameters.AddWithValue("@num", applicationNumber);
+                    var result = cmdApp.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        appCodeToUse = (Guid)result;
+                    }
+                }
+
+                if (appCodeToUse != Guid.Empty)
+                {
+                    detailCode = InsertApplicationProcessDetail(conn, appCodeToUse, app.tasks_task_code.Value);
+                }
+            }
+
+            return (detailCode, toDoCode);
+        }
 
         // New helper method to get registration code
         private string GetOrgRegistrationCode(SqlConnection conn, Guid? organizationCode)
@@ -205,7 +240,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             return result != null ? result.ToString() : null;
         }
 
-       [HttpGet]
+        [HttpGet]
         public IActionResult GetApplications([FromQuery] Guid userId)
         {
             string connStr = _config.GetConnectionString("HU_DB");
@@ -213,7 +248,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             try
             {
                 using SqlConnection conn = new(connStr);
-                using SqlCommand cmd = new("sp_GetApplicationsByUser", conn) 
+                using SqlCommand cmd = new("sp_GetApplicationsByUser", conn)
                 {
                     CommandType = CommandType.StoredProcedure
                 };
@@ -239,7 +274,8 @@ namespace HUCMS.Controllers.HUCMS.Commons
                         organization_code = reader["organization_code"] != DBNull.Value ? Guid.Parse(reader["organization_code"].ToString()) : Guid.Empty,
                         application_detail_id = reader["application_detail_id"] != DBNull.Value ? Guid.Parse(reader["application_detail_id"].ToString()) : Guid.Empty,
                         application_number = reader["application_number"]?.ToString(),
-                        start_date = reader["start_date"] != DBNull.Value ? Convert.ToDateTime(reader["start_date"]) : (DateTime?)null
+                        start_date = reader["start_date"] != DBNull.Value ? Convert.ToDateTime(reader["start_date"]) : (DateTime?)null,
+                        to_do_code = reader["to_do_code"] != DBNull.Value ? Guid.Parse(reader["to_do_code"].ToString()) : Guid.Empty,
                     });
                 }
 
@@ -254,6 +290,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 });
             }
         }
+
         private Guid InsertApplicationProcessDetail(SqlConnection conn, Guid applicationCode, Guid tasksTaskCode)
         {
             using SqlCommand cmd2 = new("proc_InsertApplicationProcessDetail", conn)
@@ -299,6 +336,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
             return (Guid)outputParam.Value;
         }
+
         private Guid InsertApplicationProcessCertificateData(SqlConnection conn, Guid? diagnosis_code, Guid? applicationProcessDetailsProcessDetailCode)
         {
             using SqlCommand cmd = new("proc_InsertApplicationprocessCertificatedata", conn)
@@ -323,6 +361,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
             return (Guid)outputParam.Value;
         }
+
         private Guid InsertApplicationProcessPaymentRefundData(
             SqlConnection conn,
             Guid? diagnosis_code,
@@ -376,7 +415,8 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 throw;
             }
         }
-        private Guid? getPrCodeByDiagnosisCode( SqlConnection conn, Guid applicationProcessDetailsProcessDetailCode, SqlTransaction transaction)
+
+        private Guid? getPrCodeByDiagnosisCode(SqlConnection conn, Guid applicationProcessDetailsProcessDetailCode, SqlTransaction transaction)
         {
             using SqlCommand cmd = new("proc_getPrCode", conn, transaction)
             {
@@ -399,6 +439,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
             return (Guid)outputParam.Value;
         }
+
         private void UploadDocument(
             SqlConnection conn,
             Guid? pr_code,
