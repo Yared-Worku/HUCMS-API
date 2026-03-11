@@ -129,7 +129,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
             return outputParam.Value != DBNull.Value ? (Guid)outputParam.Value : Guid.Empty;
         }
 
-        //Helper method to fetch application_code using stored procedure
         private Guid GetApplicationCode(SqlConnection conn, string applicationNumber)
         {
             using SqlCommand cmd = new("proc_getApplicationCode", conn)
