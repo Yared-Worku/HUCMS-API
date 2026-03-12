@@ -42,6 +42,8 @@ namespace HUCMS.Controllers.HUCMS.Commons
                         return NotFound(new { Message = "Start date not found for given ToDoCode." });
 
                     startDate = Convert.ToDateTime(result);
+                    // Calculate elapsed hours
+                    elapsedTimeHours = Convert.ToDecimal((endDate - startDate).TotalHours);
                 }
                 //Get gototask
                 using (SqlCommand cmd = new("proc_getGoToTask", conn))
@@ -55,9 +57,6 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
                     goto_task = (Guid)result;
                 }
-
-                // Calculate elapsed hours
-                elapsedTimeHours = Convert.ToDecimal((endDate - startDate).TotalHours);
 
                 // Update old row
                 using (SqlCommand updateCmd = new("proc_updateTodoListTask", conn))

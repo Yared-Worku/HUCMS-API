@@ -57,8 +57,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                     });
                 }
 
-                // Continue insertion process
-                //processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, dtd.tasks_task_code.Value);
                 if (chr.process_detail_code.HasValue && chr.process_detail_code != Guid.Empty)
                 {
                     processDetailCode = chr.process_detail_code.Value;
