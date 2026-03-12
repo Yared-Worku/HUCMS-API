@@ -17,8 +17,8 @@ namespace HUCMS.Controllers.HUCMS.Commons
             _config = config;
         }
 
-        [HttpGet]
-        public IActionResult GetTaskDetail([FromQuery] Guid taskCode, [FromQuery] string applicationNumber)
+        [HttpGet("{todocode}")]
+        public IActionResult GetTaskDetail([FromRoute] Guid todocode)
         {
             string connStr = _config.GetConnectionString("HU_DB");
             var results = new List<TaskDetail>();
@@ -28,13 +28,11 @@ namespace HUCMS.Controllers.HUCMS.Commons
             {
                 conn.Open();
 
-                // 1️⃣ Get all application_detail_ids
                 var applicationDetailIds = new List<Guid>();
                 using (SqlCommand cmdGetIds = new("proc_GetApplicationDetailId", conn))
                 {
                     cmdGetIds.CommandType = CommandType.StoredProcedure;
-                    cmdGetIds.Parameters.AddWithValue("@TaskCode", taskCode);
-                    cmdGetIds.Parameters.AddWithValue("@ApplicationNumber", applicationNumber);
+                    cmdGetIds.Parameters.AddWithValue("@todocode", todocode);
 
                     using SqlDataReader reader = cmdGetIds.ExecuteReader();
                     while (reader.Read())
@@ -47,7 +45,6 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 if (applicationDetailIds.Count == 0)
                     return NotFound(new { Message = "No Application Detail IDs found." });
 
-                // 2️⃣ For each ID, fetch task details
                 foreach (var id in applicationDetailIds)
                 {
                     using (SqlCommand cmd = new("proc_GetTaskDetail", conn))
