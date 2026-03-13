@@ -1,4 +1,4 @@
-﻿namespace HUCMS.Models.HUCMS.Commons
+﻿namespace HUCMS.Models.HUCMS.PaymentRefund
 {
     public class TaskDetail
     {

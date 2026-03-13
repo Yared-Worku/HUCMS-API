@@ -47,8 +47,15 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 }
 
                 // Continue insertion process
-                processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, td.tasks_task_code.Value);
-                processDataCode = InsertApplicationProcessData(conn, td.value, processDetailCode);
+                if ( td.ProcessDetailCode == Guid.Empty)
+                {
+                    processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, td.tasks_task_code.Value);
+                }
+                else
+                {
+                    processDetailCode = td.ProcessDetailCode;
+                }
+                    processDataCode = InsertApplicationProcessData(conn, td.value, processDetailCode);
 
                 // Update TodoDetailId using new helper method
                 UpdateTodoDetailId(conn, applicationNumber, processDetailCode);

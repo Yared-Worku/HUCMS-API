@@ -1,18 +1,18 @@
-﻿using HUCMS.Models.HUCMS.Commons;
+﻿using HUCMS.Models.HUCMS.PaymentRefund;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
-namespace HUCMS.Controllers.HUCMS.Commons
+namespace HUCMS.Controllers.HUCMS.PaymentRefund
 {
     [Route("api/HU/[controller]")]
     [ApiController]
-    public class GetTaskDetails : ControllerBase
+    public class GetTaskDetailsMDController : ControllerBase
     {
         private readonly IConfiguration _config;
 
-        public GetTaskDetails(IConfiguration config)
+        public GetTaskDetailsMDController(IConfiguration config)
         {
             _config = config;
         }
@@ -29,7 +29,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 conn.Open();
 
                 var applicationDetailIds = new List<Guid>();
-                using (SqlCommand cmdGetIds = new("proc_GetApplicationDetailId", conn))
+                using (SqlCommand cmdGetIds = new("proc_GetApplicationDetailIdMD", conn))
                 {
                     cmdGetIds.CommandType = CommandType.StoredProcedure;
                     cmdGetIds.Parameters.AddWithValue("@todocode", todocode);
@@ -74,6 +74,5 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 });
             }
         }
-
     }
 }

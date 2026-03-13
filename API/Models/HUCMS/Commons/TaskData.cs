@@ -8,5 +8,6 @@
         public string? UserId { get; set; }
         public Guid? organization_code { get; set; }
         public Guid? services_service_code { get; set; }
+        public Guid ProcessDetailCode { get; set; }
     }
 }

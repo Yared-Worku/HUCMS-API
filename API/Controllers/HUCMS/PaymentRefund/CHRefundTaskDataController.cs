@@ -38,7 +38,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                 Guid pr_Code = Guid.Empty;
                 Guid created_by = chr.UserId.Value;
 
-                // Fetch application_code via stored procedure
                 applicationCode = GetApplicationCode(conn, applicationNumber);
 
                 if (applicationCode == Guid.Empty)
