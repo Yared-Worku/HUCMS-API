@@ -28,6 +28,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 DateTime endDate = DateTime.Now;
                 decimal elapsedTimeHours;
                 Guid goto_task;
+                Guid newToDoCode = Guid.NewGuid();
                 using SqlConnection conn = new(connStr);
                 conn.Open();
 
@@ -86,22 +87,24 @@ namespace HUCMS.Controllers.HUCMS.Commons
                         CompletedToDoCode = todo.todocode
                     });
                 }
-                // Insert new row
-                Guid newToDoCode = Guid.NewGuid();
-                using (SqlCommand insertCmd = new("proc_insertToDolist", conn))
-                {
-                    insertCmd.CommandType = CommandType.StoredProcedure;
-                    //insertCmd.Parameters.AddWithValue("@old_todocode", todocode);
-                    insertCmd.Parameters.AddWithValue("@new_todocode", newToDoCode);
-                    insertCmd.Parameters.AddWithValue("@new_start_date", DateTime.Now);
-                    insertCmd.Parameters.AddWithValue("@jumpfrom", (object?)todo.todocode ?? DBNull.Value);
-                    insertCmd.Parameters.AddWithValue("@tasks_task_code", goto_task);
-                    insertCmd.Parameters.AddWithValue("@userid", "00000000-0000-0000-0000-000000000000");
-                    insertCmd.Parameters.AddWithValue("@organization_code", (object?)todo.organization_code ?? DBNull.Value);
-                    insertCmd.Parameters.AddWithValue("@application_number", (object?)todo.application_number ?? DBNull.Value);
-                    insertCmd.ExecuteNonQuery();
-                }
 
+                  if (goto_task != Guid.Empty)
+                {
+                    // Insert new row
+                    using (SqlCommand insertCmd = new("proc_insertToDolist", conn))
+                    {
+                        insertCmd.CommandType = CommandType.StoredProcedure;
+                        //insertCmd.Parameters.AddWithValue("@old_todocode", todocode);
+                        insertCmd.Parameters.AddWithValue("@new_todocode", newToDoCode);
+                        insertCmd.Parameters.AddWithValue("@new_start_date", DateTime.Now);
+                        insertCmd.Parameters.AddWithValue("@jumpfrom", (object?)todo.todocode ?? DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@tasks_task_code", goto_task);
+                        insertCmd.Parameters.AddWithValue("@userid", "00000000-0000-0000-0000-000000000000");
+                        insertCmd.Parameters.AddWithValue("@organization_code", (object?)todo.organization_code ?? DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@application_number", (object?)todo.application_number ?? DBNull.Value);
+                        insertCmd.ExecuteNonQuery();
+                    }
+                }
                 return Ok(new
                 {
                     Message = "✅ ToDo updated and new ToDo created",

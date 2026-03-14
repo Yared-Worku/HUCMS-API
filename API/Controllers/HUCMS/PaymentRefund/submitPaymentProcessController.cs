@@ -87,7 +87,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
 
                 cmd.ExecuteNonQuery();
                 UpdateTodoDetailId(conn, spp.application_number, processDetailCode);
-                TodolistUpdate(conn, processDetailCode, endDate, elapsedTimeHours);
                 return Ok(new { Message = "Payment process submitted successfully." });
             }
             catch (SqlException ex)
@@ -161,18 +160,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
             cmd.Parameters.AddWithValue("@application_number", applicationNumber ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@process_detail_code", processDetailCode);
 
-            cmd.ExecuteNonQuery();
-        }
-        private void TodolistUpdate(SqlConnection conn, Guid processDetailCode, DateTime endDate, Decimal elapsedTimeHours)
-        {
-            using SqlCommand cmd = new("proc_UpdateToDoListCertificateToClosed", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
-            cmd.Parameters.AddWithValue("@application_detail_id", processDetailCode);
-            cmd.Parameters.AddWithValue("@end_date", endDate);
-            cmd.Parameters.AddWithValue("@elapsed_time_hours", elapsedTimeHours);
             cmd.ExecuteNonQuery();
         }
 

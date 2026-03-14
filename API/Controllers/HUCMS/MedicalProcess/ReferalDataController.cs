@@ -26,9 +26,25 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
             string connStr = _config.GetConnectionString("HU_DB");
 
             using SqlConnection conn = new(connStr);
+            conn.Open();
             try
             {
-                conn.Open();
+                DateTime startDate;
+                DateTime endDate = DateTime.Now;
+                decimal elapsedTimeHours;
+                using (SqlCommand cmdsd = new("proc_getStartDate", conn))
+                {
+                    cmdsd.CommandType = CommandType.StoredProcedure;
+                    cmdsd.Parameters.AddWithValue("@todocode", rf.todocode);
+                    cmdsd.Parameters.AddWithValue("@applicationNumber", rf.application_number);
+                    object res = cmdsd.ExecuteScalar();
+                    if (res == null || res == DBNull.Value)
+                        return NotFound(new { Message = "Start date not found for given ToDoCode." });
+
+                    startDate = Convert.ToDateTime(res);
+                }
+                elapsedTimeHours = Convert.ToDecimal((endDate - startDate).TotalHours);
+
 
                 using SqlCommand cmd = new("proc_InsertReferalData", conn)
                 {
@@ -42,6 +58,7 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
                 cmd.Parameters.AddWithValue("@reason_for_referal", rf.referalReason);
 
                 cmd.ExecuteNonQuery();
+                TodolistUpdate(conn, rf.processDetailCode.Value, endDate, elapsedTimeHours);
                 return Ok(new
                 {
                     Message = rf.refCode.HasValue
@@ -58,6 +75,18 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
                     Details = ex.Message
                 });
             }
+        }
+        private void TodolistUpdate(SqlConnection conn, Guid processDetailCode, DateTime endDate, Decimal elapsedTimeHours)
+        {
+            using SqlCommand cmd = new("proc_UpdateToDoListCertificateToClosed", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            cmd.Parameters.AddWithValue("@application_detail_id", processDetailCode);
+            cmd.Parameters.AddWithValue("@end_date", endDate);
+            cmd.Parameters.AddWithValue("@elapsed_time_hours", elapsedTimeHours);
+            cmd.ExecuteNonQuery();
         }
 
     }
