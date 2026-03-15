@@ -39,6 +39,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     id.Add(new UserId
                     {
                         userid = reader["userID"] != DBNull.Value ? reader["userID"].ToString() : null,
+                        roleid = reader["RoleID"] != DBNull.Value ? reader["RoleID"].ToString() : null
                     });
                 }
 
