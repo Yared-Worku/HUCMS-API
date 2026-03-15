@@ -18,16 +18,26 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
         }
 
         [HttpGet("{UserID}")]
-        public IActionResult GetDashboardData([FromRoute] Guid UserID)
+        public IActionResult GetDashboardData([FromRoute] Guid UserID, [FromQuery] Guid? roleID)
         {
             string connStr = _config.GetConnectionString("HU_DB");
             var response = new StudentDashboardResponse();
+            string procedureName;
 
+            if (roleID?.ToString().ToUpper() == "4ED1B191-AD58-4EAD-B269-02576B4DD8D0")
+            {
+                procedureName = "proc_GetStudentDashboardData";
+            }
+            else
+            {
+                procedureName = "proc_GetOtherRolesDashboardData"; 
+            }
             using SqlConnection conn = new(connStr);
             try
             {
                 conn.Open();
-                using SqlCommand cmd = new("proc_GetStudentDashboardData", conn)
+
+                using SqlCommand cmd = new(procedureName, conn)
                 {
                     CommandType = CommandType.StoredProcedure
                 };
@@ -53,11 +63,9 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                 var distinctApps = response.Details
                     .GroupBy(x => x.Application_No)
                     .Select(g => {
-                        // 1. Get all statuses for this specific application
+   
                         var statuses = g.Select(x => x.status).ToList();
 
-                        // 2. Define priority: If "PS" exists anywhere in this application, 
-                        // it counts as Rejected for the student dashboard.
                         string finalStatus;
 
                         if (statuses.Contains("PS"))
@@ -81,7 +89,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                         return new { FinalStatus = finalStatus };
                     }).ToList();
 
-                // The counts will now work correctly
                 response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
                 response.Stats.Rejected = distinctApps.Count(x => x.FinalStatus == "PS");
                 response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
