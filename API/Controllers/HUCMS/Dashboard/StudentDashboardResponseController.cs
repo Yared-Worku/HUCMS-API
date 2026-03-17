@@ -80,7 +80,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                         {
                             finalStatus = "S";
                         }
-                        else if (statuses.Contains("O")) 
+                        else if (statuses.Contains("O"))
                         {
                             finalStatus = "O";
                         }
@@ -90,15 +90,18 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                             finalStatus = statuses.FirstOrDefault() ?? "";
                         }
 
-                        return new { FinalStatus = finalStatus };
+                        return new { Application_No = g.Key, FinalStatus = finalStatus };
                     }).ToList();
 
-                // Stats assignments (Duplicates removed for clarity)
                 response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
                 response.Stats.Rejected = distinctApps.Count(x => x.FinalStatus == "PS");
                 response.Stats.Picked = distinctApps.Count(x => x.FinalStatus == "P");
                 response.Stats.Suspended = distinctApps.Count(x => x.FinalStatus == "S");
                 response.Stats.Open = distinctApps.Count(x => x.FinalStatus == "O");
+
+                response.Details = distinctApps.Select(app =>
+                    response.Details.FirstOrDefault(d => d.Application_No == app.Application_No && d.status == app.FinalStatus)
+                ).Where(d => d != null).ToList();
 
                 return Ok(response);
             }
