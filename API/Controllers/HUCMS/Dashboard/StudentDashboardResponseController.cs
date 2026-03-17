@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
-using System.Linq; 
+using System.Linq;
 
 namespace HUCMS.Controllers.HUCMS.PaymentRefund
 {
@@ -30,8 +30,9 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
             }
             else
             {
-                procedureName = "proc_GetOtherRolesDashboardData"; 
+                procedureName = "proc_GetOtherRolesDashboardData";
             }
+
             using SqlConnection conn = new(connStr);
             try
             {
@@ -42,6 +43,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                     CommandType = CommandType.StoredProcedure
                 };
                 cmd.Parameters.AddWithValue("@UserID", UserID);
+                cmd.Parameters.AddWithValue("@roleID", (object)roleID ?? DBNull.Value);
 
                 using SqlDataReader reader = cmd.ExecuteReader();
 
@@ -63,9 +65,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                 var distinctApps = response.Details
                     .GroupBy(x => x.Application_No)
                     .Select(g => {
-   
                         var statuses = g.Select(x => x.status).ToList();
-
                         string finalStatus;
 
                         if (statuses.Contains("PS"))
@@ -80,22 +80,26 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                         {
                             finalStatus = "S";
                         }
+                        else if (statuses.Contains("O")) 
+                        {
+                            finalStatus = "O";
+                        }
                         else
                         {
-                            // Fallback to the first status found (usually "C" or "O")
+                            // Fallback for "C" (Completed) or any other status
                             finalStatus = statuses.FirstOrDefault() ?? "";
                         }
 
                         return new { FinalStatus = finalStatus };
                     }).ToList();
 
+                // Stats assignments (Duplicates removed for clarity)
                 response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
                 response.Stats.Rejected = distinctApps.Count(x => x.FinalStatus == "PS");
-                response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
                 response.Stats.Picked = distinctApps.Count(x => x.FinalStatus == "P");
                 response.Stats.Suspended = distinctApps.Count(x => x.FinalStatus == "S");
                 response.Stats.Open = distinctApps.Count(x => x.FinalStatus == "O");
-                response.Stats.Rejected = distinctApps.Count(x => x.FinalStatus == "PS");
+
                 return Ok(response);
             }
             catch (SqlException ex)
