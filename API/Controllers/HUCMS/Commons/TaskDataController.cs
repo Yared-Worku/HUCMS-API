@@ -47,13 +47,13 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 }
 
                 // Continue insertion process
-                if ( td.ProcessDetailCode == Guid.Empty)
+                if (!td.ProcessDetailCode.HasValue || td.ProcessDetailCode == Guid.Empty)
                 {
                     processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, td.tasks_task_code.Value);
                 }
                 else
                 {
-                    processDetailCode = td.ProcessDetailCode;
+                    processDetailCode = td.ProcessDetailCode.Value;
                 }
                     processDataCode = InsertApplicationProcessData(conn, td.value, processDetailCode);
 

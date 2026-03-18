@@ -56,7 +56,8 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                     return BadRequest(new { Error = "Application not found for the given application number." });
                 }
 
-                if (spp.ProcessDetailCode.GetValueOrDefault() == Guid.Empty)
+                if (!spp.ProcessDetailCode.HasValue || spp.ProcessDetailCode == Guid.Empty)
+                  
                 {
                     if (!spp.tasks_task_code.HasValue || spp.tasks_task_code.Value == Guid.Empty)
                     {
@@ -87,7 +88,10 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
 
                 cmd.ExecuteNonQuery();
                 UpdateTodoDetailId(conn, spp.application_number, processDetailCode);
-                return Ok(new { Message = "Payment process submitted successfully." });
+                return Ok(new { 
+                    Message = "Payment process submitted successfully.",
+                    ProcessDetailCode = processDetailCode
+                });
             }
             catch (SqlException ex)
             {
