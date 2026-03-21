@@ -23,7 +23,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
             string connStr = _config.GetConnectionString("HU_DB");
             var response = new StudentDashboardResponse();
 
-            // 1. Determine the role context once and store it
             bool isStudentRole = roleID?.ToString().ToUpper() == "4ED1B191-AD58-4EAD-B269-02576B4DD8D0";
             string procedureName = isStudentRole ? "proc_GetStudentDashboardData" : "proc_GetOtherRolesDashboardData";
 
@@ -61,7 +60,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                     .Select(g => {
                         var statuses = g.Select(x => x.status).ToList();
                         string finalStatus;
-                        bool isPickedByCurrentUser = false; // 2. Add a flag to track who picked it
+                        bool isPickedByCurrentUser = false; 
 
                         if (statuses.Contains("PS"))
                         {
@@ -70,7 +69,6 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                         else if (statuses.Contains("P"))
                         {
                             finalStatus = "P";
-                            // 3. Verify if ANY of the "P" records for this application belong to the requested UserID
                             isPickedByCurrentUser = g.Any(x => x.status == "P" && x.UserID == UserID);
                         }
                         else if (statuses.Contains("S"))
@@ -94,7 +92,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                 response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
                 response.Stats.Rejected = distinctApps.Count(x => x.FinalStatus == "PS");
 
-                // 4. Implement conditional counting for "Picked"
+                // Implement conditional counting for "Picked"
                 if (isStudentRole)
                 {
                     response.Stats.Picked = distinctApps.Count(x => x.FinalStatus == "P");
