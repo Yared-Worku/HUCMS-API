@@ -22,16 +22,10 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
         {
             string connStr = _config.GetConnectionString("HU_DB");
             var response = new StudentDashboardResponse();
-            string procedureName;
 
-            if (roleID?.ToString().ToUpper() == "4ED1B191-AD58-4EAD-B269-02576B4DD8D0")
-            {
-                procedureName = "proc_GetStudentDashboardData";
-            }
-            else
-            {
-                procedureName = "proc_GetOtherRolesDashboardData";
-            }
+            // 1. Determine the role context once and store it
+            bool isStudentRole = roleID?.ToString().ToUpper() == "4ED1B191-AD58-4EAD-B269-02576B4DD8D0";
+            string procedureName = isStudentRole ? "proc_GetStudentDashboardData" : "proc_GetOtherRolesDashboardData";
 
             using SqlConnection conn = new(connStr);
             try
@@ -67,6 +61,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                     .Select(g => {
                         var statuses = g.Select(x => x.status).ToList();
                         string finalStatus;
+                        bool isPickedByCurrentUser = false; // 2. Add a flag to track who picked it
 
                         if (statuses.Contains("PS"))
                         {
@@ -75,6 +70,8 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                         else if (statuses.Contains("P"))
                         {
                             finalStatus = "P";
+                            // 3. Verify if ANY of the "P" records for this application belong to the requested UserID
+                            isPickedByCurrentUser = g.Any(x => x.status == "P" && x.UserID == UserID);
                         }
                         else if (statuses.Contains("S"))
                         {
@@ -90,12 +87,23 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                             finalStatus = statuses.FirstOrDefault() ?? "";
                         }
 
-                        return new { Application_No = g.Key, FinalStatus = finalStatus };
+                        // Pass the flag out of the projection
+                        return new { Application_No = g.Key, FinalStatus = finalStatus, IsPickedByCurrentUser = isPickedByCurrentUser };
                     }).ToList();
 
                 response.Stats.Completed = distinctApps.Count(x => x.FinalStatus == "C");
                 response.Stats.Rejected = distinctApps.Count(x => x.FinalStatus == "PS");
-                response.Stats.Picked = distinctApps.Count(x => x.FinalStatus == "P");
+
+                // 4. Implement conditional counting for "Picked"
+                if (isStudentRole)
+                {
+                    response.Stats.Picked = distinctApps.Count(x => x.FinalStatus == "P");
+                }
+                else
+                {
+                    response.Stats.Picked = distinctApps.Count(x => x.FinalStatus == "P" && x.IsPickedByCurrentUser);
+                }
+
                 response.Stats.Suspended = distinctApps.Count(x => x.FinalStatus == "S");
                 response.Stats.Open = distinctApps.Count(x => x.FinalStatus == "O");
 
