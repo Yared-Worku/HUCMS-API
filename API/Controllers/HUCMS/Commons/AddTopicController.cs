@@ -17,6 +17,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             _config = config;
         }
 
+
         //[HttpPost]
         //public IActionResult RegisterTaskType([FromBody] AddTopic model)
         //{
