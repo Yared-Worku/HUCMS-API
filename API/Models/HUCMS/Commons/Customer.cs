@@ -27,7 +27,7 @@
         public DateTime? Created_Date { get; set; }
         public DateTime? Updated_Date { get; set; }
         //public DateTime? Deleted_Date { get; set; }
-        public string? Signiture { get; set; }
+        //public string? Signiture { get; set; }
  
     }
 }
