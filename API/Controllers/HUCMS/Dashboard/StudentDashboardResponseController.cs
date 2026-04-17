@@ -23,7 +23,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
             string connStr = _config.GetConnectionString("HU_DB");
             var response = new StudentDashboardResponse();
 
-            bool isStudentRole = roleID?.ToString().ToUpper() == "4ED1B191-AD58-4EAD-B269-02576B4DD8D0";
+            bool isStudentRole = roleID?.ToString().ToUpper() == "C2D34305-61DB-4540-B368-26E4F9564C62";
             string procedureName = isStudentRole ? "proc_GetStudentDashboardData" : "proc_GetOtherRolesDashboardData";
 
             using SqlConnection conn = new(connStr);
