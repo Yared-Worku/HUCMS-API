@@ -115,8 +115,8 @@ namespace HUCMS.Controllers.HUCMS.Commons
                     cmd.Parameters.AddWithValue("@date_created_et", app.date_created_et ?? EthiopianDateConverter.ToEthiopianDateTimeString(DateTime.UtcNow));
                     cmd.Parameters.AddWithValue("@UserId", app.UserId ?? "00000000-0000-0000-0000-000000000000");
                     cmd.Parameters.AddWithValue("@services_service_code", app.services_service_code);
-                    cmd.Parameters.AddWithValue("@is_synched", app.is_synched ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@date_synched", app.date_synched ?? (object)DBNull.Value);
+                    //cmd.Parameters.AddWithValue("@is_synched", app.is_synched ?? (object)DBNull.Value);
+                    //cmd.Parameters.AddWithValue("@date_synched", app.date_synched ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@organization_code", app.organization_code ?? (object)DBNull.Value);
 
                     // ✅ Execute stored procedure and read results

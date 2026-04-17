@@ -21,8 +21,8 @@ namespace HUCMS.Models.HUCMS.Commons
         public string? description_en { get; set; }
         public string? username { get; set; }
         public Guid? services_service_code { get; set; }
-        public bool? is_synched { get; set; }
-        public DateTime? date_synched { get; set; }
+        //public bool? is_synched { get; set; }
+        //public DateTime? date_synched { get; set; }
         public Guid? organization_code { get; set; }
         public Guid? application_detail_id { get; set; }
         public Guid? meta_data_forms_form_code { get; set; }
