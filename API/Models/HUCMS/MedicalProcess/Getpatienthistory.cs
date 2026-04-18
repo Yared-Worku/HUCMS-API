@@ -4,7 +4,7 @@
     {
         public string? detail_diagnosis { get; set; }
         public string? Doctor_FirstName { get; set; }
-        public string? created_date { get; set; }
+        public DateTime? created_date { get; set; }
         public string? Doctor_LastName { get; set; }
         public string? LabTechnician_FirstName { get; set; }
         public string? LabTechnician_LastName { get; set; }

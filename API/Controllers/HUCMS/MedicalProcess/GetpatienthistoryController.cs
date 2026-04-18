@@ -41,7 +41,7 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
                             {
                                 detail_diagnosis = reader["detail_diagnosis"] != DBNull.Value ? reader["detail_diagnosis"].ToString() : null,
                                 Doctor_FirstName = reader["Doctor_FirstName"] != DBNull.Value ? reader["Doctor_FirstName"].ToString() : null,
-                                created_date = reader["created_date"] != DBNull.Value ? reader["created_date"].ToString() : null,
+                                created_date = reader["created_date"] != DBNull.Value ? (DateTime)reader["created_date"] : null,
                                 Doctor_LastName = reader["Doctor_LastName"] != DBNull.Value ? reader["Doctor_LastName"].ToString() : null,
                                 LabTechnician_FirstName = reader["LabTechnician_FirstName"] != DBNull.Value ? reader["LabTechnician_FirstName"].ToString() : null,
                                 LabTechnician_LastName = reader["LabTechnician_LastName"] != DBNull.Value ? reader["LabTechnician_LastName"].ToString() : null,

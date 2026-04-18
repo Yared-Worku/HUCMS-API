@@ -25,7 +25,7 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
             var results = new List<GetRefer>();
 
             using SqlConnection conn = new(connStr);
-            using SqlCommand cmd = new("proc_getAReferalData", conn)
+            using SqlCommand cmd = new("proc_getReferalData", conn)
             {
                 CommandType = CommandType.StoredProcedure
             };

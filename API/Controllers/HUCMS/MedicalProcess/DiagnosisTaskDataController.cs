@@ -1,5 +1,4 @@
-﻿
-using HUCMS.Models.HUCMS.MedicalProcess;
+﻿using HUCMS.Models.HUCMS.MedicalProcess;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -30,61 +29,46 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
 
             try
             {
-                // Declare required variables
                 Guid applicationCode = Guid.Empty;
-                string applicationNumber = dtd.application_number; // Sent from UI
+                string applicationNumber = dtd.application_number; 
                 Guid processDetailCode = Guid.Empty;
                 Guid diagnosis_Code = Guid.Empty;
                 Guid created_by = dtd.UserId.Value;
 
-
-                // Fetch application_code via stored procedure
                 applicationCode = GetApplicationCode(conn, applicationNumber);
 
                 if (applicationCode == Guid.Empty)
                 {
-                    return BadRequest(new
-                    {
-                        Error = "Application not found for the given application number."
-                    });
+                    return BadRequest(new { Error = "Application not found." });
                 }
 
-                // Continue insertion process
-                //processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, dtd.tasks_task_code.Value);
                 if (dtd.process_detail_code.HasValue && dtd.process_detail_code != Guid.Empty)
                 {
                     processDetailCode = dtd.process_detail_code.Value;
                 }
                 else
                 {
-                    processDetailCode = InsertApplicationProcessDetail(
-                        conn,
-                        applicationCode,
-                        dtd.tasks_task_code.Value
-                    );
+                    processDetailCode = InsertApplicationProcessDetail(conn, applicationCode, dtd.tasks_task_code.Value);
                 }
 
-                diagnosis_Code = InsertApplicationProcessDiagnosisData(conn, dtd.diagnosis, created_by, processDetailCode);
+                // FIXED: Pass dtd.diagnosis_Code here to allow the SP to see the existing ID
+                diagnosis_Code = InsertApplicationProcessDiagnosisData(conn, dtd.diagnosis, created_by, processDetailCode, dtd.diagnosis_Code);
 
-                // Update TodoDetailId using new helper method
                 UpdateTodoDetailId(conn, applicationNumber, processDetailCode);
 
                 return Ok(new
                 {
-                    Message = "✅ Diagnosis Task data inserted successfully",
+                    Message = "✅ Diagnosis Task data processed successfully",
                     ProcessDetailCode = processDetailCode,
                     diagnosis_Code
                 });
             }
             catch (SqlException ex)
             {
-                return StatusCode(500, new
-                {
-                    Error = "❌ Database error occurred",
-                    Details = ex.Message
-                });
+                return StatusCode(500, new { Error = "❌ Database error", Details = ex.Message });
             }
         }
+
         [HttpPut]
         public IActionResult UpdateDiagnosisTaskData([FromBody] DiagnosisTaskData dtd)
         {
@@ -104,7 +88,6 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
 
                 cmd.Parameters.AddWithValue("@diagnosis_Code", dtd.diagnosis_Code);
                 cmd.Parameters.AddWithValue("@diagnosis", dtd.diagnosis ?? (object)DBNull.Value);
-                //cmd.Parameters.AddWithValue("@updated_by", dtd.UserId ?? (object)DBNull.Value);
 
                 cmd.ExecuteNonQuery();
 
@@ -116,58 +99,33 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
             }
             catch (SqlException ex)
             {
-                return StatusCode(500, new
-                {
-                    Error = "❌ Database error occurred",
-                    Details = ex.Message
-                });
+                return StatusCode(500, new { Error = "❌ Database error", Details = ex.Message });
             }
         }
 
-
-        //Helper method to fetch application_code using stored procedure
         private Guid GetApplicationCode(SqlConnection conn, string applicationNumber)
         {
-            using SqlCommand cmd = new("proc_getApplicationCode", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
+            using SqlCommand cmd = new("proc_getApplicationCode", conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@application_number", applicationNumber ?? (object)DBNull.Value);
-
-            SqlParameter outputParam = new("@application_code", SqlDbType.UniqueIdentifier)
-            {
-                Direction = ParameterDirection.Output
-            };
+            SqlParameter outputParam = new("@application_code", SqlDbType.UniqueIdentifier) { Direction = ParameterDirection.Output };
             cmd.Parameters.Add(outputParam);
-
             cmd.ExecuteNonQuery();
-
             return outputParam.Value != DBNull.Value ? (Guid)outputParam.Value : Guid.Empty;
         }
 
         private Guid InsertApplicationProcessDetail(SqlConnection conn, Guid applicationCode, Guid tasksTaskCode)
         {
-            using SqlCommand cmd2 = new("proc_InsertApplicationProcessDetail", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
+            using SqlCommand cmd2 = new("proc_InsertApplicationProcessDetail", conn) { CommandType = CommandType.StoredProcedure };
             cmd2.Parameters.AddWithValue("@applications_application_code", applicationCode);
             cmd2.Parameters.AddWithValue("@tasks_task_code", tasksTaskCode);
-
-            SqlParameter outputParam = new("@process_detail_code", SqlDbType.UniqueIdentifier)
-            {
-                Direction = ParameterDirection.Output
-            };
+            SqlParameter outputParam = new("@process_detail_code", SqlDbType.UniqueIdentifier) { Direction = ParameterDirection.Output };
             cmd2.Parameters.Add(outputParam);
-
             cmd2.ExecuteNonQuery();
-
             return (Guid)outputParam.Value;
         }
 
-        private Guid InsertApplicationProcessDiagnosisData(SqlConnection conn, string diagnosis,Guid created_by, Guid? applicationProcessDetailsProcessDetailCode)
+        // MODIFIED: Added existingDiagnosisCode parameter and changed direction to InputOutput
+        private Guid InsertApplicationProcessDiagnosisData(SqlConnection conn, string diagnosis, Guid created_by, Guid? applicationProcessDetailsProcessDetailCode, Guid? existingDiagnosisCode)
         {
             using SqlCommand cmd = new("proc_InsertApplicationProcessDiagnosisdata", conn)
             {
@@ -177,15 +135,16 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
             cmd.Parameters.AddWithValue("@diagnosis", diagnosis ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@created_by", created_by);
 
-
             if (applicationProcessDetailsProcessDetailCode.HasValue)
                 cmd.Parameters.AddWithValue("@application_process_details_code", applicationProcessDetailsProcessDetailCode.Value);
             else
                 cmd.Parameters.AddWithValue("@application_process_details_code", DBNull.Value);
 
+            // FIXED: Set Direction to InputOutput and assign the existing code value
             SqlParameter outputParam = new("@diagnosis_Code", SqlDbType.UniqueIdentifier)
             {
-                Direction = ParameterDirection.Output
+                Direction = ParameterDirection.InputOutput,
+                Value = (object)existingDiagnosisCode ?? DBNull.Value
             };
             cmd.Parameters.Add(outputParam);
 
@@ -194,17 +153,11 @@ namespace HUCMS.Controllers.HUCMS.MedicalProcess
             return (Guid)outputParam.Value;
         }
 
-        // helper method to update Todo Detail ID
         private void UpdateTodoDetailId(SqlConnection conn, string applicationNumber, Guid processDetailCode)
         {
-            using SqlCommand cmd = new("proc_updateTodoDetailId", conn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
+            using SqlCommand cmd = new("proc_updateTodoDetailId", conn) { CommandType = CommandType.StoredProcedure };
             cmd.Parameters.AddWithValue("@application_number", applicationNumber ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@process_detail_code", processDetailCode);
-
             cmd.ExecuteNonQuery();
         }
     }
