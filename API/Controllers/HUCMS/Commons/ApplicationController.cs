@@ -187,22 +187,39 @@ namespace HUCMS.Controllers.HUCMS.Commons
         private (Guid ApplicationDetailId, Guid ToDoCode) GetProcessDetailCode(SqlConnection conn, string applicationNumber, Application app)
         {
             Guid detailCode = Guid.Empty;
-            Guid toDoCode = Guid.Empty;
+            Guid toDoCode = app.todocode ?? Guid.Empty;
 
-            using (SqlCommand cmd = new("proc_GetDetailCode", conn))
+            // 1. If the frontend provided a specific todocode (like your 'PS' task), check ITS detail_id first
+            if (toDoCode != Guid.Empty)
             {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@application_number", applicationNumber);
-
-                using SqlDataReader reader = cmd.ExecuteReader();
-                if (reader.Read())
+                using (SqlCommand cmd = new("SELECT application_detail_id FROM to_do_lists WHERE to_do_code = @todocode", conn))
                 {
-                    detailCode = reader.IsDBNull(0) ? Guid.Empty : reader.GetGuid(0);
-                    toDoCode = reader.IsDBNull(1) ? Guid.Empty : reader.GetGuid(1);
+                    cmd.Parameters.AddWithValue("@todocode", toDoCode);
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        detailCode = (Guid)result;
+                    }
+                }
+            }
+            else
+            {
+                // 2. Fallback to the stored procedure only if no todocode was provided
+                using (SqlCommand cmd = new("proc_GetDetailCode", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@application_number", applicationNumber);
+
+                    using SqlDataReader reader = cmd.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        detailCode = reader.IsDBNull(0) ? Guid.Empty : reader.GetGuid(0);
+                        toDoCode = reader.IsDBNull(1) ? Guid.Empty : reader.GetGuid(1);
+                    }
                 }
             }
 
-            // Logic to handle missing application_code from frontend payload
+            // 3. Logic to handle generating a NEW detail code (This is what your 'PS' task needs!)
             if (detailCode == Guid.Empty && app.tasks_task_code.HasValue)
             {
                 Guid appCodeToUse = app.application_code ?? Guid.Empty;
@@ -220,12 +237,55 @@ namespace HUCMS.Controllers.HUCMS.Commons
 
                 if (appCodeToUse != Guid.Empty)
                 {
+                    // This will now successfully fire for your 'PS' task and create a brand new detail code
                     detailCode = InsertApplicationProcessDetail(conn, appCodeToUse, app.tasks_task_code.Value);
                 }
             }
 
             return (detailCode, toDoCode);
         }
+        //private (Guid ApplicationDetailId, Guid ToDoCode) GetProcessDetailCode(SqlConnection conn, string applicationNumber, Application app)
+        //{
+        //    Guid detailCode = Guid.Empty;
+        //    Guid toDoCode = Guid.Empty;
+
+        //    using (SqlCommand cmd = new("proc_GetDetailCode", conn))
+        //    {
+        //        cmd.CommandType = CommandType.StoredProcedure;
+        //        cmd.Parameters.AddWithValue("@application_number", applicationNumber);
+
+        //        using SqlDataReader reader = cmd.ExecuteReader();
+        //        if (reader.Read())
+        //        {
+        //            detailCode = reader.IsDBNull(0) ? Guid.Empty : reader.GetGuid(0);
+        //            toDoCode = reader.IsDBNull(1) ? Guid.Empty : reader.GetGuid(1);
+        //        }
+        //    }
+
+        //    // Logic to handle missing application_code from frontend payload
+        //    if (detailCode == Guid.Empty && app.tasks_task_code.HasValue)
+        //    {
+        //        Guid appCodeToUse = app.application_code ?? Guid.Empty;
+
+        //        if (appCodeToUse == Guid.Empty)
+        //        {
+        //            using SqlCommand cmdApp = new("SELECT application_code FROM applications WHERE application_number = @num", conn);
+        //            cmdApp.Parameters.AddWithValue("@num", applicationNumber);
+        //            var result = cmdApp.ExecuteScalar();
+        //            if (result != null && result != DBNull.Value)
+        //            {
+        //                appCodeToUse = (Guid)result;
+        //            }
+        //        }
+
+        //        if (appCodeToUse != Guid.Empty)
+        //        {
+        //            detailCode = InsertApplicationProcessDetail(conn, appCodeToUse, app.tasks_task_code.Value);
+        //        }
+        //    }
+
+        //    return (detailCode, toDoCode);
+        //}
 
         // New helper method to get registration code
         private string GetOrgRegistrationCode(SqlConnection conn, Guid? organizationCode)
