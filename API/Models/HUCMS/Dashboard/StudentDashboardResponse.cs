@@ -10,7 +10,7 @@ namespace HUCMS.Models.HUCMS.PaymentRefund
     {
         public string? Application_No { get; set; }
         public string? Service_Name { get; set; }
-        public string? Application_Date { get; set; }
+        public DateTime? Application_Date { get; set; }
         public string? status { get; set; }
         public string? RoleName { get; set; }
         public Guid? UserID { get; set; }

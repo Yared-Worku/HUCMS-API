@@ -46,7 +46,7 @@ namespace HUCMS.Controllers.HUCMS.PaymentRefund
                     {
                         Application_No = reader["Application_No"]?.ToString(),
                         Service_Name = reader["Service_Name"]?.ToString(),
-                        Application_Date = reader["Application_Date"]?.ToString(),
+                        Application_Date = reader["Application_Date"] != DBNull.Value ? (DateTime)reader["Application_Date"] : null,
                         status = reader["status"]?.ToString(),
                         RoleName = reader["RoleName"]?.ToString(),
                         UserID = reader["UserID"] != DBNull.Value ? (Guid)reader["UserID"] : null,

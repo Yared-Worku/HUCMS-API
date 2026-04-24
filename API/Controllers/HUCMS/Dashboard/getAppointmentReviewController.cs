@@ -41,7 +41,7 @@ namespace HUCMS.Controllers.HUCMS.Dashboard
                     results.Add(new getAppointmentReview
                     {
                         DoctorFName = reader["DoctorFName"] != DBNull.Value ? reader["DoctorFName"].ToString() : null,
-                        appointment_date = reader["appointment_date"] != DBNull.Value ? reader["appointment_date"].ToString() : null,
+                        appointment_date = reader["appointment_date"] != DBNull.Value ? DateOnly.FromDateTime((DateTime)reader["appointment_date"]): null,
                         DoctorLName = reader["DoctorLName"] != DBNull.Value ? reader["DoctorLName"].ToString() : null,
                         application_number = reader["application_number"] != DBNull.Value ? reader["application_number"].ToString() : null
                     });
