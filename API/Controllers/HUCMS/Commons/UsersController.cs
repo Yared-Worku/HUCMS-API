@@ -41,7 +41,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                         FirstName = reader["FirstName"] != DBNull.Value ? reader["FirstName"].ToString() : null,
                         LastName = reader["LastName"] != DBNull.Value ? reader["LastName"].ToString() : null,
                         Email = reader["Email"] != DBNull.Value ? reader["Email"].ToString() : null,
-                        depCode = reader["depCode"] != DBNull.Value ? Guid.Parse(reader["depCode"].ToString()) : null
+                        depCode = reader["orgCode"] != DBNull.Value ? Guid.Parse(reader["orgCode"].ToString()) : null
                     });
                 }
 
@@ -57,7 +57,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
         [HttpPut("{userId}/AssignDepartment")]
         public IActionResult AssignDepartment(Guid userId, [FromBody] AssignDepartmentRequest request)
         {
-            if (userId == Guid.Empty || string.IsNullOrEmpty(request.depCode))
+            if (userId == Guid.Empty )
                 return BadRequest("Invalid request");
 
             string connStr = _config.GetConnectionString("HU_DB");
@@ -69,7 +69,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             };
 
             cmd.Parameters.AddWithValue("@UserID", userId);
-            cmd.Parameters.AddWithValue("@depCode", Guid.Parse(request.depCode));
+            cmd.Parameters.AddWithValue("@depCode",string.IsNullOrEmpty(request.depCode)? (object)DBNull.Value: Guid.Parse(request.depCode));
 
             try
             {

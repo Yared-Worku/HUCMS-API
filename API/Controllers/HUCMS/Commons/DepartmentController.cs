@@ -39,12 +39,12 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 {
                     departments.Add(new Department
                     {
-                        depCode = reader["depCode"] != DBNull.Value ? reader["depCode"].ToString() : null,
-                        depName = reader["depName"] != DBNull.Value ? reader["depName"].ToString() : null,
-                        orgCode = reader["orgCode"] != DBNull.Value ? reader["orgCode"].ToString() : null,
-                        created_by = reader["created_by"] != DBNull.Value ? Guid.Parse(reader["created_by"].ToString()) : null,
-                        created_date = reader["created_date"] != DBNull.Value ? (DateTime?)reader["created_date"] : null,
-                        is_active = reader["is_active"] != DBNull.Value ? (bool?)reader["is_active"] : null,
+                        depCode = reader["organization_code"] != DBNull.Value ? reader["organization_code"].ToString() : null,
+                        depName = reader["name_en"] != DBNull.Value ? reader["name_en"].ToString() : null,
+                        //orgCode = reader["orgCode"] != DBNull.Value ? reader["orgCode"].ToString() : null,
+                        //created_by = reader["created_by"] != DBNull.Value ? Guid.Parse(reader["created_by"].ToString()) : null,
+                        //created_date = reader["created_date"] != DBNull.Value ? (DateTime?)reader["created_date"] : null,
+                        //is_active = reader["is_active"] != DBNull.Value ? (bool?)reader["is_active"] : null,
                         // is_published = reader["is_published"] != DBNull.Value ? (bool?)reader["is_published"] : null,
                     });
                 }
