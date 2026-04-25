@@ -66,7 +66,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             cmd.Parameters.AddWithValue("@Age", customer.Age ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Mobile_No", customer.Mobile_No ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Photo", customer.Photo ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@SDP_ID", customer.SDP_ID ?? (object)DBNull.Value);
+            //cmd.Parameters.AddWithValue("@SDP_ID", customer.SDP_ID ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@ID_NO", customer.ID_NO ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Created_By", customer.Created_By);
             cmd.Parameters.AddWithValue("@Updated_By", customer.Updated_By ?? "00000000-0000-0000-0000-000000000000");
@@ -131,7 +131,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                         ID_NO = reader["ID_NO"]?.ToString(),
                         Photo = reader["Photo"]?.ToString(),
                         depname = reader["depname"]?.ToString(),
-                        SDP_ID = reader["SDP_ID"]?.ToString(),
+                        //SDP_ID = reader["SDP_ID"]?.ToString(),
                      
                         Created_By = reader["Created_By"]?.ToString(),
                         Updated_By = reader["Updated_By"]?.ToString(),
