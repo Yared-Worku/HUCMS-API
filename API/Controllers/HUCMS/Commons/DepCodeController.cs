@@ -30,7 +30,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
                 CommandType = CommandType.StoredProcedure
             };
 
-            // Add the parameter that the React app is sending
+            // Add the parameter that the React app is sending 
             cmd.Parameters.AddWithValue("@UserID", userid);
 
             try
