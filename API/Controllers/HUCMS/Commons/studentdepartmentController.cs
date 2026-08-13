@@ -15,7 +15,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
         {
             _config = config;
         }
-        // ✅ Get All students Department
+        // Get All students Department
         [HttpGet]
         public IActionResult GetAllDepartments()
         {
