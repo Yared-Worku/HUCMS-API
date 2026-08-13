@@ -16,7 +16,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             _config = config;
         }
 
-        // 🔹 Get All Users
+        // Get All Users
         [HttpGet]
         public IActionResult GetAllUsers()
         {
