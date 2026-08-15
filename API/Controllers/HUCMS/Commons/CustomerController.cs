@@ -92,7 +92,7 @@ namespace HUCMS.Controllers.HUCMS.Commons
             }
         }
 
-        // 🔹 GET: api/HU/Customer/{userid}
+        // api/HU/Customer/{userid}
         [HttpGet("{userid}")]
         public IActionResult GetCustomerByUsername(string userid)
         {
